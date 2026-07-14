@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+langchain
+langgraph
+langchain-groq
+pydantic
+pydantic-settings
+python-dotenv
+httpx
+pandas
+pytest
+pytest-asyncio
