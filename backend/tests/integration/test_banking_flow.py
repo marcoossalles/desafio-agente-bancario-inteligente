@@ -101,7 +101,9 @@ def test_release_debug_value_is_parsed_as_false():
     assert settings.debug is False
 
 
-def test_successful_exchange_quote_finishes_service(monkeypatch):
+def test_successful_exchange_quote_does_not_force_conversation_end(
+    monkeypatch,
+):
     monkeypatch.setattr(
         nodes,
         "get_exchange_agent",
@@ -116,8 +118,9 @@ def test_successful_exchange_quote_finishes_service(monkeypatch):
         }
     )
 
-    assert result["conversation_finished"] is True
-    assert result["current_agent"] == "finish"
+    assert result["current_agent"] == "exchange"
+    assert result.get("conversation_finished") is None
+    assert result["error_message"] is None
 
 
 def test_chat_stream_transmits_tokens_without_internal_routing(monkeypatch):

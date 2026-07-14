@@ -43,7 +43,7 @@ st.markdown(
 
         .block-container {
             max-width: 980px;
-            padding: 1.5rem 2rem 8.5rem;
+            padding: 1.5rem 2rem 5.5rem;
         }
 
         .agil-welcome {
@@ -129,58 +129,14 @@ st.markdown(
         }
 
         [data-testid="stBottom"] > div {
-            background: linear-gradient(180deg, transparent, var(--agil-background) 32%);
-            padding-bottom: 1.6rem;
+            background: linear-gradient(180deg, transparent, var(--agil-background) 55%);
+            padding-bottom: 0.8rem;
         }
 
         [data-testid="stBottom"] [data-testid="stChatInput"] {
             margin-left: auto;
             margin-right: auto;
             max-width: 916px;
-        }
-
-        .st-key-welcome_form {
-            margin: 1.6rem auto 0;
-            max-width: 720px;
-            position: relative;
-        }
-
-        .st-key-welcome_form [data-testid="stTextInputRootElement"] {
-            background: #f2e2ff;
-            border: 1px solid rgba(130, 10, 209, 0.18);
-            border-radius: 22px;
-            box-shadow: 0 14px 45px rgba(61, 27, 75, 0.12);
-            min-height: 72px;
-            padding-right: 4rem;
-        }
-
-        .st-key-welcome_form [data-testid="stTextInputRootElement"]:focus-within {
-            border-color: var(--agil-purple);
-            box-shadow: 0 14px 45px rgba(130, 10, 209, 0.18);
-        }
-
-        .st-key-welcome_form [data-testid="stFormSubmitButton"] {
-            bottom: 0.65rem;
-            position: absolute;
-            right: 0.7rem;
-            width: 46px;
-            z-index: 2;
-        }
-
-        .st-key-welcome_form [data-testid="stFormSubmitButton"] button {
-            background: rgba(130, 10, 209, 0.10);
-            border: 0;
-            border-radius: 12px;
-            color: var(--agil-purple);
-            height: 44px;
-            min-height: 44px;
-            padding: 0;
-            width: 44px;
-        }
-
-        .st-key-welcome_form [data-testid="stFormSubmitButton"] button:hover {
-            background: var(--agil-purple);
-            color: white;
         }
 
         .st-key-test_data_action [data-testid="stPopoverButton"],
@@ -243,7 +199,7 @@ st.markdown(
 
         @media (max-width: 700px) {
             .block-container {
-                padding: 0.8rem 0.8rem 7.5rem;
+                padding: 0.8rem 0.8rem 5rem;
             }
 
             .st-key-test_data_action,
@@ -274,10 +230,6 @@ st.markdown(
 
             .agil-welcome h2 {
                 font-size: 2.15rem;
-            }
-
-            .st-key-welcome_form [data-testid="stTextInputRootElement"] {
-                min-height: 62px;
             }
 
             [data-testid="stChatMessage"] {
@@ -343,8 +295,6 @@ with st.container(key="new_conversation_action"):
         reset_conversation()
         st.rerun()
 
-prompt = None
-
 if not st.session_state.messages:
     st.markdown(
         """
@@ -356,24 +306,6 @@ if not st.session_state.messages:
         """,
         unsafe_allow_html=True,
     )
-
-    with st.form(
-        key="welcome_form",
-        clear_on_submit=True,
-        border=False,
-    ):
-        initial_prompt = st.text_input(
-            "Mensagem",
-            placeholder="Como posso ajudar você hoje?",
-            label_visibility="collapsed",
-        )
-        submitted = st.form_submit_button(
-            "↑",
-            help="Enviar mensagem",
-        )
-
-        if submitted and initial_prompt.strip():
-            prompt = initial_prompt.strip()
 
 for saved_message in st.session_state.messages:
     avatar = "💜" if saved_message["role"] == "assistant" else "👤"
@@ -417,15 +349,14 @@ if st.session_state.messages and st.session_state.finished:
         "para iniciar outra conversa."
     )
 
-if st.session_state.messages:
-    prompt = st.chat_input(
-        "Como posso ajudar você hoje?",
-        disabled=(
-            st.session_state.finished
-            or st.session_state.pending_prompt is not None
-        ),
-        key="conversation_prompt",
-    )
+prompt = st.chat_input(
+    "Como posso ajudar você hoje?",
+    disabled=(
+        st.session_state.finished
+        or st.session_state.pending_prompt is not None
+    ),
+    key="conversation_prompt",
+)
 
 if prompt:
     st.session_state.messages.append(

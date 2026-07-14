@@ -359,18 +359,8 @@ def exchange_node(
         tool_name="get_exchange_rate",
     )
 
-    if exchange_result:
-        if exchange_result.get("success") is True:
-            update.update(
-                {
-                    "conversation_finished": True,
-                    "current_agent": "finish",
-                }
-            )
-        else:
-            update["error_message"] = exchange_result.get(
-                "message"
-            )
+    if exchange_result and exchange_result.get("success") is not True:
+        update["error_message"] = exchange_result.get("message")
 
     return update
 
@@ -384,9 +374,9 @@ def clarification_node(
         "messages": [
             AIMessage(
                 content=(
-                    "Posso ajudar com consulta ou aumento de "
-                    "limite de crédito e também com cotação de "
-                    "moedas. Qual desses serviços você deseja?"
+                    "Posso ajudar com consulta de limite de crédito, "
+                    "aumento de limite de crédito e também com cotação "
+                    "de moedas. Qual desses serviços você deseja?"
                 )
             )
         ],

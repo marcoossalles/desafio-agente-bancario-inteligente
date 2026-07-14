@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from app.graph.state import BankingState, RouteName
@@ -74,8 +74,10 @@ Regras obrigatórias:
 4. Nunca encaminhe um cliente não autenticado diretamente para credit,
    exchange ou credit_interview.
 
-5. Encaminhe para finish somente quando o cliente solicitar claramente o fim
-   do atendimento.
+5. Encaminhe para finish quando o cliente solicitar claramente o fim do
+   atendimento, ou quando a última resposta do assistente perguntou se o
+   cliente deseja algo mais e o cliente recusou ou dispensou a oferta (ex.:
+   "não, obrigado", "só isso", "não precisa", "nada mais").
 
 6. Retorne apenas a decisão estruturada de roteamento.
 """
@@ -88,6 +90,7 @@ def get_route_classifier():
 
 def classify_route(state: BankingState) -> RouteDecision:
     latest_user_message = get_latest_user_message(state)
+    latest_assistant_message = get_latest_assistant_message(state)
 
     authenticated = state.get("authenticated", False)
     current_agent = state.get("current_agent")
@@ -111,6 +114,10 @@ authenticated: {authenticated}
 current_agent: {current_agent}
 credit_request_status: {credit_status}
 interview_completed: {interview_completed}
+
+Última resposta do assistente ao cliente:
+
+{latest_assistant_message}
 
 Mensagem mais recente do cliente:
 
@@ -175,6 +182,23 @@ def get_latest_user_message(
 
     for message in reversed(messages):
         if isinstance(message, HumanMessage):
+            content = message.content
+
+            if isinstance(content, str):
+                return content
+
+            return str(content)
+
+    return ""
+
+
+def get_latest_assistant_message(
+    state: BankingState,
+) -> str:
+    messages = state.get("messages", [])
+
+    for message in reversed(messages):
+        if isinstance(message, AIMessage) and message.content:
             content = message.content
 
             if isinstance(content, str):

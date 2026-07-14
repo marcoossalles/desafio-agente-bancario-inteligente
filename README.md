@@ -48,25 +48,34 @@ cliente como Lia.
 
 ```mermaid
 flowchart TD
-    Client[Cliente] --> UI[Interface Streamlit]
+    Client[Cliente] <--> UI[Interface Streamlit]
     UI -->|HTTP + SSE| API[API FastAPI]
-    API --> Supervisor[Supervisor LangGraph]
+    API --> Supervisor{Supervisor}
+
     Supervisor -->|Não autenticado| Triage[Agente de Triagem]
-    Supervisor -->|Crédito| Credit[Agente de Crédito]
+    Supervisor -->|Consulta / aumento de limite| Credit[Agente de Crédito]
     Supervisor -->|Entrevista aceita| Interview[Agente de Entrevista]
-    Supervisor -->|Cotação| Exchange[Agente de Câmbio]
-    Supervisor -->|Encerrar| Finish[Encerramento]
+    Supervisor -->|Cotação de moedas| Exchange[Agente de Câmbio]
+    Supervisor -->|Assunto não identificado| Clarification[Esclarecimento]
+    Supervisor -->|Pedido de encerramento| Finish[Encerramento]
 
-    Triage --> Customers[(clientes.csv)]
-    Credit --> Customers
-    Credit --> ScoreTable[(score_limite.csv)]
-    Credit --> Requests[(solicitacoes_aumento_limite.csv)]
-    Interview --> Customers
-    Interview --> Credit
-    Exchange --> Frankfurter[API Frankfurter]
+    Interview -->|Score recalculado| Credit
 
-    Supervisor <--> Memory[(Memória da conversa)]
+    Triage --> Reply[Resposta ao cliente]
+    Credit --> Reply
+    Exchange --> Reply
+    Clarification --> Reply
+    Finish --> Reply
+
+    Reply -.->|Próxima mensagem| Supervisor
+    Supervisor <--> Memory[(Memória por thread_id)]
 ```
+
+Cada especialista devolve a resposta ao cliente e a conversa é retomada pelo
+Supervisor na mensagem seguinte (linha tracejada); a única transição direta
+entre especialistas na mesma execução é a Entrevista devolvendo o cliente ao
+Crédito após recalcular o score. Detalhes de qual agente lê ou grava em cada
+CSV estão na seção [Manipulação dos dados](#manipulação-dos-dados).
 
 ### Agentes
 
