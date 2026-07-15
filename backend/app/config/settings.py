@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     groq_api_key: str
     groq_model: str = "openai/gpt-oss-120b"
+    groq_max_tokens: int = 700
 
     frontend_url: str = "http://localhost:8501"
 

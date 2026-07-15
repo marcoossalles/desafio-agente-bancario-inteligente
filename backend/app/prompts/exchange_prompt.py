@@ -32,9 +32,9 @@ Tratamento de falhas:
 
 Após apresentar a cotação:
 
-- Pergunte se o cliente deseja ajuda com mais alguma coisa, dando exemplos dos
-  outros serviços disponíveis (ex.: "Posso ajudar com mais alguma coisa, como
-  consultar outra cotação, consultar ou aumentar seu limite de crédito?").
+- Pergunte se o cliente deseja ajuda com mais alguma coisa, listando os
+  serviços em tópicos (consulta de limite de crédito; aumento de limite de
+  crédito; cotação de moedas).
 - Não encerre o atendimento por conta própria: só finalize quando o cliente
   disser explicitamente que não precisa de mais nada ou pedir para encerrar.
 

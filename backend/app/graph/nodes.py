@@ -1,6 +1,8 @@
 import ast
 import json
 import logging
+import re
+from datetime import date
 from typing import Any
 
 from langchain_core.messages import (
@@ -16,8 +18,13 @@ from app.agents.credit_interview_agent import (
 from app.agents.exchange_agent import get_exchange_agent
 from app.agents.triage_agent import get_triage_agent
 from app.core.customer_context import customer_context
-from app.graph.routers import classify_route
+from app.graph.routers import classify_route, get_latest_user_message
 from app.graph.state import BankingState
+from app.tools.authentication_tools import authenticate_customer
+
+
+BIRTH_DATE_PATTERN = re.compile(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})")
+ISO_BIRTH_DATE_PATTERN = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +74,19 @@ def triage_node(
         "error_message": None,
     }
 
+    if not state.get("authenticated"):
+        latest_user_message = get_latest_user_message(state)
+
+        extracted_cpf = _extract_cpf_candidate(latest_user_message)
+        if extracted_cpf:
+            update["cpf"] = extracted_cpf
+
+        extracted_birth_date = _extract_birth_date_candidate(
+            latest_user_message
+        )
+        if extracted_birth_date:
+            update["birth_date"] = extracted_birth_date
+
     tool_arguments = _find_tool_arguments(
         messages=new_messages,
         tool_name="authenticate_customer",
@@ -87,6 +107,8 @@ def triage_node(
         tool_name="authenticate_customer",
     )
 
+    used_fallback = False
+
     if authentication_result is None:
         finish_result = _find_tool_result(
             messages=new_messages,
@@ -97,8 +119,29 @@ def triage_node(
             update.update(
                 _build_finish_update(finish_result)
             )
+            return update
 
-        return update
+        # Rede de segurança: o modelo às vezes tem CPF e data de
+        # nascimento disponíveis mas não chama a ferramenta (apenas
+        # alega uma falha). Sem isso, tentativas reais deixam de ser
+        # contabilizadas e o limite de 3 tentativas nunca é atingido.
+        candidate_cpf = update.get("cpf") or state.get("cpf")
+        candidate_birth_date = (
+            update.get("birth_date") or state.get("birth_date")
+        )
+
+        if not candidate_cpf or not candidate_birth_date:
+            return update
+
+        authentication_result = authenticate_customer.invoke(
+            {
+                "cpf": candidate_cpf,
+                "birth_date": candidate_birth_date,
+            }
+        )
+        update["cpf"] = candidate_cpf
+        update["birth_date"] = candidate_birth_date
+        used_fallback = True
 
     if authentication_result.get("authenticated") is True:
         customer = authentication_result.get("customer", {})
@@ -121,6 +164,25 @@ def triage_node(
                 "conversation_finished": False,
             }
         )
+
+        if used_fallback:
+            first_name = str(
+                customer.get("name", "")
+            ).split(" ")[0]
+
+            update["messages"] = [
+                *new_messages,
+                AIMessage(
+                    content=(
+                        f"Olá, {first_name}! Como posso te ajudar "
+                        "hoje?\n\n"
+                        "- Consulta de limite de crédito\n"
+                        "- Aumento de limite de crédito\n"
+                        "- Cotação de moedas\n\n"
+                        "Qual desses serviços você deseja?"
+                    )
+                ),
+            ]
 
         return update
 
@@ -162,6 +224,16 @@ def triage_node(
                     ],
                 }
             )
+        elif used_fallback:
+            update["messages"] = [
+                *new_messages,
+                AIMessage(
+                    content=(
+                        "Não foi possível confirmar seus dados. "
+                        "Por favor, informe novamente o seu CPF."
+                    )
+                ),
+            ]
 
         return update
 
@@ -602,3 +674,35 @@ def _normalize_cpf(cpf: str) -> str:
         for character in cpf
         if character.isdigit()
     )
+
+
+def _extract_cpf_candidate(text: str) -> str | None:
+    digits = _normalize_cpf(text)
+
+    if len(digits) == 11:
+        return digits
+
+    return None
+
+
+def _extract_birth_date_candidate(text: str) -> str | None:
+    match = BIRTH_DATE_PATTERN.search(text)
+
+    if match:
+        day, month, year = match.groups()
+
+        try:
+            return date(
+                int(year),
+                int(month),
+                int(day),
+            ).isoformat()
+        except ValueError:
+            return None
+
+    match = ISO_BIRTH_DATE_PATTERN.search(text)
+
+    if match:
+        return match.group(0)
+
+    return None
